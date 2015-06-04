@@ -1,3 +1,19 @@
+/***********************************************************
+* Nom Fichier: Emetteur.ino
+*
+* Programme: Emetteur Station Météo Arduino
+*
+* Fonctions: - Lecture valeurs capteurs °t et HR%           
+*            - Envoi des valeurs par 433MHz          
+*            - Affichage des valeurs sur le port série       
+*
+* Dernière MàJ: 04/06/2015
+*
+************************************************************
+*    Michel Esc 2015, Open Source | @Eih3Prog +Eih3Prog
+***********************************************************/
+
+/**** Déclarations & Directives ****/
 #include <dht.h>
 #include <OneWire.h>
 #include <VirtualWire.h>
@@ -10,6 +26,7 @@
 #define TX        12
 #define DELAY     5 // secondes avant chaque envoi
 
+/**** Déclarations Variables ****/
 float tempC0 = 0; // température DHT11
 float tempC1 = 0; // température LM335
 float tempC2 = 0; // température DS18S20
@@ -58,6 +75,7 @@ void envoiValeurs(String valeurs)
   const char* data = valeurs.c_str();  
 
   digitalWrite(LED, HIGH);
+  delay(500);
 
   vw_send((uint8_t *)data, strlen(data));
 
