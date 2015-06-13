@@ -1,13 +1,17 @@
 /***********************************************************
 * Nom Fichier: Emetteur.ino
 *
-* Programme: Emetteur Station Météo Arduino
+* Programme : Emetteur Station Météo Arduino
 *
-* Fonctions: - Lecture valeurs capteurs °t et HR%           
-*            - Envoi des valeurs par 433MHz          
-*            - Affichage des valeurs sur le port série       
+* Fonctions : - Lecture valeurs capteurs °t et HR%           
+*             - Envoi des valeurs par 433MHz          
+*             - Affichage des valeurs sur le port série
 *
-* Dernière MàJ: 04/06/2015
+* Capteurs : - DHT11 Humidité + Température
+*            - LM335 
+*            - DS18S20
+*
+* Dernière MàJ : 07/06/2015
 *
 ************************************************************
 *    Michel Esc 2015, Open Source | @Eih3Prog +Eih3Prog
@@ -27,10 +31,12 @@
 #define DELAY     5 // secondes avant chaque envoi
 
 /**** Déclarations Variables ****/
-float tempC0 = 0; // température DHT11
-float tempC1 = 0; // température LM335
-float tempC2 = 0; // température DS18S20
-float humiC0 = 0; // humidité DHT11
+int tempT0 = 0; // température DHT11
+int tempT1 = 0; // température LM335
+int tempT2 = 0; // température DS18S20
+int humiH0 = 0; // humidité DHT11
+
+boolean cSharpApp;
 
 OneWire ds(DS18S20);
 dht DHT;
@@ -42,46 +48,45 @@ void setup()
   
   Serial.begin(9600);
 
-  Serial.println("Station Meteo Arduino Emetteur\n"); 
+  Serial.println("Emetteur Station Meteo Arduino"); 
   
   vw_set_tx_pin(TX); 
-  vw_setup(2000);  
+  vw_setup(4000);  
 
   delay(1000);
 }
 
 void loop()
 {
+  if (Serial.available() > 0)
+  {
+    char serialRx = Serial.read();
+    
+    switch (serialRx)
+    {
+      case '#':
+        cSharpApp = true;
+        break;
+      case 'A':
+        cSharpApp = false;
+        Serial.println("\nCommunication Arduino");
+        break;
+    }  
+  }
+  
   lectureValeurs();
 
-  // Envoi de la trame ex: C024.00C124.02C224.08H50.00
-  envoiValeurs("C0" + (String)tempC0 
-             + "C1" + (String)tempC1
-             + "C2" + (String)tempC2
-             + "H0" + (String)humiC0);
+  // Envoi de la trame ex: T033T135T239H033
+  envoiValeurs("T0" + (String)tempT0 
+             + "T1" + (String)tempT1
+             + "T2" + (String)tempT2
+             + "H0" + (String)humiH0);
 
   delay(500);
  
   affichageValeurs();  
 
   delay(DELAY * 1000);
-}
-
-/**** Fonction envoi des valeurs des capteurs ****/
-void envoiValeurs(String valeurs)
-{  
-  Serial.println("Valeurs envoyees : " + valeurs);
-
-  const char* data = valeurs.c_str();  
-
-  digitalWrite(LED, HIGH);
-  delay(500);
-
-  vw_send((uint8_t *)data, strlen(data));
-
-  vw_wait_tx(); 
-
-  digitalWrite(LED, LOW);
 }
 
 /**** Fonction lecture DS18S20 ****/
@@ -135,29 +140,52 @@ void lectureValeurs()
   int chk = DHT.read11(DHT11); // Lecture des données DHT11  
   delay(50);  
   
-  tempC0 = DHT.temperature;   
+  tempT0 = DHT.temperature;   
   delay(50); 
   
-  tempC1 = (analogRead(LM335) * 0.484) - 273.15;  
+  tempT1 = (analogRead(LM335) * 0.484) - 273.15;  
   delay(50); 
   
-  tempC2 = DS18S20Temp();
+  tempT2 = DS18S20Temp();
   delay(50);
 
-  humiC0 = DHT.humidity;   
+  humiH0 = DHT.humidity;   
   delay(50);
+}
+
+/**** Fonction envoi des valeurs des capteurs ****/
+void envoiValeurs(String valeurs)
+{
+  const char* data = valeurs.c_str();  
+
+  digitalWrite(LED, HIGH);
+  delay(50);
+
+  vw_send((uint8_t *)data, strlen(data));
+
+  vw_wait_tx(); 
+
+  digitalWrite(LED, LOW);
 }
 
 /**** Fonction affichage des valeurs sur le port série ****/
 void affichageValeurs()
 {
-  Serial.println("DHT11 : " + (String)tempC0 + " oC");   
-  
-  Serial.println("LM335 : " + (String)tempC1 + " oC"); 
-  
-  Serial.println("DS18S20 : " + (String)tempC2 + " oC");
-  
-  Serial.println("DHT11 Hum : " + (String)humiC0 + " %");
-
-  Serial.println("\n");
+  if (cSharpApp == true)
+  {
+    Serial.println("T0" + (String)tempT0
+                 + "T1" + (String)tempT1
+                 + "T2" + (String)tempT2
+                 + "H0" + (String)humiH0);
+    
+  } else
+  {      
+    Serial.println("\nDHT11 : " + (String)tempT0 + " oC");   
+    
+    Serial.println("LM335 : " + (String)tempT1 + " oC"); 
+    
+    Serial.println("DS18S20 : " + (String)tempT2 + " oC");
+    
+    Serial.println("DHT11 : humi " + (String)humiH0 + " % HR");
+  }
 }
